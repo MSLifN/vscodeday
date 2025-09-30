@@ -1,7 +1,318 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+@using System.Text.Json
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
-<h1>Hello, world!</h1>
+<PageTitle>MyPetVenues — Home</PageTitle>
 
-Welcome to your new app.
+<div class="app" id="appRoot">
+	<header class="site-header">
+		<div class="container header-inner">
+			<div class="brand" role="img" aria-label="MyPetVenues logo">🐾 MyPetVenues</div>
+			<nav class="nav">
+				<a href="#search" class="nav-link">Search 🔎</a>
+				<a href="#add" class="nav-link">Add Venue ➕</a>
+				<a href="#favorites" class="nav-link">Favorites ❤️</a>
+			</nav>
+			<div class="controls">
+				<button class="btn icon" @onclick="ToggleTheme" aria-pressed="false" title="Toggle light / dark mode">🌓</button>
+			</div>
+		</div>
+	</header>
+
+	<main>
+		<section class="hero">
+			<div class="container hero-inner">
+				<div class="hero-copy">
+					<h1>Find pet-friendly places near you — fast, friendly, and fun 🐶🐱</h1>
+					<p class="lead">Discover parks, cafes, hotels, and stores that welcome your furry friends. Add venues, favorite the ones you love, and share short reviews with photos.</p>
+					<div class="hero-ctas">
+						<a class="btn primary" href="#search">Browse Venues</a>
+						<a class="btn ghost" href="#add">Add a Venue</a>
+					</div>
+					<ul class="features">
+						<li>Quick search & filters</li>
+						<li>Favorites saved to your device</li>
+						<li>Image galleries & reviews</li>
+					</ul>
+				</div>
+				<div class="hero-media" aria-hidden="true">
+					<div class="collage">
+						<img src="images/pets/dog1.png" alt="Happy dog" loading="lazy" />
+						<img src="images/pets/cat2.jpg" alt="Curious cat" loading="lazy" />
+						<img src="images/venues/park1.jpg" alt="Park with trees" loading="lazy" />
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="featured container" id="search">
+			<h2>Featured Venues ✨</h2>
+			<p class="muted">Hand-picked pet-friendly spots to get you started.</p>
+
+			<div class="grid">
+				@foreach (var v in Featured)
+				{
+					<article class="card" @onclick:stopPropagation>
+						<div class="card-media">
+							<img src="@v.Thumbnail" alt="@v.Name photo" loading="lazy" />
+							<button class="fav-btn" @onclick="() => ToggleFavorite(v)" aria-pressed="@v.IsFavorite" aria-label="Toggle favorite">
+								@(v.IsFavorite ? "❤️" : "🤍")
+							</button>
+						</div>
+						<div class="card-body">
+							<h3 class="card-title">@v.Name</h3>
+							<div class="meta">@v.Category • @v.Rating stars • @v.ReviewsCount reviews</div>
+							<p class="desc">@v.ShortDescription</p>
+							<div class="card-actions">
+								<a class="btn small" href="#" @onclick="() => OpenDetail(v)">View</a>
+								<a class="btn small ghost" href="#" @onclick="() => QuickAddReview(v)">Review</a>
+							</div>
+						</div>
+					</article>
+				}
+			</div>
+		</section>
+
+		<section class="container favorites" id="favorites">
+			<h2>Your Favorites ❤️</h2>
+			@if (Favorites.Count == 0)
+			{
+				<div class="empty">No favorites yet — tap the heart on a venue to save it here.</div>
+			}
+			else
+			{
+				<div class="grid small">
+					@foreach (var v in Favorites)
+					{
+						<div class="fav-card">
+							<img src="@v.Thumbnail" alt="@v.Name" loading="lazy" />
+							<div class="fav-body">
+								<div class="fav-title">@v.Name</div>
+								<div class="fav-meta">@v.Category</div>
+							</div>
+						</div>
+					}
+				</div>
+			}
+		</section>
+	</main>
+
+	<footer class="site-footer">
+		<div class="container footer-inner">
+			<div>© @DateTime.Now.Year MyPetVenues — Find pet-friendly places near you.</div>
+			<nav class="footer-nav">
+				<a href="#">Privacy</a>
+				<a href="#">Terms</a>
+				<a href="#">Contact</a>
+			</nav>
+		</div>
+	</footer>
+
+	<div class="toast" hidden="@string.IsNullOrEmpty(Notification)">@Notification</div>
+
+</div>
+
+<style>
+:root{
+  --bg: #fff;
+  --text: #111;
+  --muted: #6b6b6b;
+  --accent-1: #ff6fa3; /* pink */
+  --accent-2: #ff3f7a; /* deeper */
+  --card-bg: linear-gradient(180deg, rgba(255,111,163,0.06), rgba(255,63,122,0.03));
+}
+body.dark{
+  --bg: #0b0a0e;
+  --text: #f6f6f8;
+  --muted: #cfcfd3;
+}
+.app{background:var(--bg);color:var(--text);min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;font-size:18px;line-height:1.45}
+.container{max-width:1100px;margin:0 auto;padding:1rem}
+.site-header{position:sticky;top:0;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:white;padding:.6rem 0;box-shadow:0 6px 20px rgba(0,0,0,0.12);z-index:50}
+.header-inner{display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:700;font-size:1.25rem}
+.nav{display:flex;gap:.5rem}
+.nav-link{color:rgba(255,255,255,0.95);text-decoration:none;padding:.35rem .65rem;border-radius:8px;transition:background .18s,transform .18s}
+.nav-link:hover{background:rgba(255,255,255,0.08);transform:translateY(-2px)}
+.btn{display:inline-block;padding:.6rem 1rem;border-radius:8px;border:none;cursor:pointer;text-decoration:none}
+.btn.primary{background:linear-gradient(90deg,var(--accent-2),var(--accent-1));color:white;font-weight:600;box-shadow:0 8px 30px rgba(255,63,122,0.12)}
+.btn.ghost{background:transparent;border:1px solid rgba(0,0,0,0.06)}
+.btn.small{padding:.35rem .6rem;font-size:.85rem}
+.hero{padding:2.2rem 0}
+.hero-inner{display:grid;grid-template-columns:1fr 360px;gap:1.2rem;align-items:center}
+.hero-copy h1{font-size:2.8rem;margin:0 0 .4rem}
+.lead{font-size:1.125rem}
+.lead{color:var(--muted);margin-bottom:.8rem}
+.hero-ctas{display:flex;gap:.6rem;margin-bottom:.8rem}
+.features{display:flex;gap:1rem;list-style:none;padding:0;margin:0;color:var(--muted)}
+.collage{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.collage img{width:100%;height:100%;object-fit:cover;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
+.featured{padding:2rem 0}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.grid.small{grid-template-columns:repeat(3,1fr)}
+.card{background:var(--card-bg);border-radius:12px;overflow:hidden;transition:transform .18s,box-shadow .18s;display:flex;flex-direction:column}
+.card:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(0,0,0,0.12)}
+.card-media{position:relative}
+.card-media img{width:100%;height:240px;object-fit:cover;display:block}
+.fav-btn{position:absolute;right:10px;top:10px;background:rgba(255,255,255,0.9);border-radius:999px;padding:.4rem;border:none;cursor:pointer}
+.card-body{padding:1rem}
+.card-title{margin:0;font-size:1.2rem}
+.meta{color:var(--muted);font-size:.95rem;margin:.25rem 0}
+.desc{color:var(--muted);font-size:1rem}
+.card-actions{display:flex;gap:.5rem;margin-top:.6rem}
+.favorites{padding:2rem 0}
+.empty{padding:1rem;border:1px dashed rgba(0,0,0,0.06);border-radius:10px;color:var(--muted)}
+.fav-card{display:flex;gap:.6rem;align-items:center;background:var(--card-bg);padding:.6rem;border-radius:10px}
+.fav-card img{width:80px;height:60px;object-fit:cover;border-radius:8px}
+.toast{position:fixed;right:20px;bottom:20px;background:var(--accent-2);color:white;padding:.6rem 1rem;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.18)}
+.site-footer{padding:1rem 0;margin-top:2rem;border-top:1px solid rgba(0,0,0,0.04)}
+.footer-inner{display:flex;justify-content:space-between;align-items:center}
+.footer-nav a{color:var(--muted);text-decoration:none;margin-left:1rem}
+
+@@media (max-width:900px){
+  .hero-inner{grid-template-columns:1fr}
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .grid.small{grid-template-columns:repeat(2,1fr)}
+}
+@@media (max-width:600px){
+	.grid{grid-template-columns:1fr}
+	.collage{grid-template-columns:1fr}
+	.hero-copy h1{font-size:1.8rem}
+	.hero-copy h1{line-height:1.15}
+	.brand{font-size:1.1rem}
+	.nav{display:none}
+}
+</style>
+
+<script>
+  window.getFavorites = function(){
+	try{ return localStorage.getItem('mpv_favorites'); }catch(e){return null}
+  };
+  window.setFavorites = function(json){
+	try{ localStorage.setItem('mpv_favorites', json); }catch(e){/*ignore*/}
+  };
+  window.getTheme = function(){ try{ return localStorage.getItem('mpv_theme'); }catch(e){return null} };
+  window.setTheme = function(t){ try{ localStorage.setItem('mpv_theme', t); }catch(e){} };
+  // Apply saved theme on load
+  (function(){
+	var t = window.getTheme();
+	if(t === 'dark') document.body.classList.add('dark');
+  })();
+</script>
+
+@code{
+	string? Notification;
+	List<Venue> Featured = new();
+	List<Venue> Favorites = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		// seed some featured venues (images exist in wwwroot/images)
+		Featured = new List<Venue>
+		{
+			new Venue{ Id="v1", Name="Paws & Coffee", Category="Cafe", ShortDescription="A cozy cafe where pups are welcome on the patio.", Thumbnail="images/venues/cafe1.jpg", Rating=4.7, ReviewsCount=24},
+			new Venue{ Id="v2", Name="Greenwood Park", Category="Park", ShortDescription="Big open fields, dog run, and water fountains.", Thumbnail="images/venues/park1.jpg", Rating=4.9, ReviewsCount=98},
+			new Venue{ Id="v3", Name="Happy Tails Hotel", Category="Hotel", ShortDescription="Pet-friendly rooms and on-site grooming services.", Thumbnail="images/venues/hotel1.jpg", Rating=4.5, ReviewsCount=12}
+		};
+
+		// load persisted favorites from localStorage
+		try
+		{
+			var json = await JS.InvokeAsync<string>("getFavorites");
+			if (!string.IsNullOrEmpty(json))
+			{
+				var ids = JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+				foreach (var f in Featured)
+				{
+					if (f.Id != null && ids.Contains(f.Id))
+					{
+						f.IsFavorite = true;
+						Favorites.Add(f);
+					}
+				}
+			}
+		}
+		catch { /* non-fatal */ }
+	}
+
+	void OpenDetail(Venue v)
+	{
+		// Navigate to a detail page if present; placeholder behavior
+		Navigation.NavigateTo($"/venue/{v.Id}");
+	}
+
+	void QuickAddReview(Venue v)
+	{
+		Notification = $"Ready to add a quick review for {v.Name}!";
+		_ = ClearNotificationAfterDelay();
+	}
+
+	async Task ToggleFavorite(Venue v)
+	{
+		v.IsFavorite = !v.IsFavorite;
+		if (v.IsFavorite)
+		{
+			if (!Favorites.Contains(v)) Favorites.Add(v);
+			Notification = $"Added {v.Name} to favorites ❤️";
+		}
+		else
+		{
+			Favorites.RemoveAll(x => x.Id == v.Id);
+			Notification = $"Removed {v.Name} from favorites";
+		}
+		await SaveFavorites();
+		_ = ClearNotificationAfterDelay();
+	}
+
+	async Task SaveFavorites()
+	{
+		try
+		{
+			var ids = Favorites.Select(f => f.Id).ToList();
+			var json = JsonSerializer.Serialize(ids);
+			await JS.InvokeVoidAsync("setFavorites", json);
+		}
+		catch { }
+	}
+
+	async Task ClearNotificationAfterDelay()
+	{
+		StateHasChanged();
+		await Task.Delay(2200);
+		Notification = null;
+		StateHasChanged();
+	}
+
+	async Task ToggleTheme()
+	{
+		try
+		{
+			var isDark = await JS.InvokeAsync<string>("getTheme");
+			if (isDark == "dark")
+			{
+				await JS.InvokeVoidAsync("setTheme", "light");
+				await JS.InvokeVoidAsync("eval", "document.body.classList.remove('dark')");
+			}
+			else
+			{
+				await JS.InvokeVoidAsync("setTheme", "dark");
+				await JS.InvokeVoidAsync("eval", "document.body.classList.add('dark')");
+			}
+		}
+		catch { }
+	}
+
+	class Venue
+	{
+		public string? Id { get; set; }
+		public string? Name { get; set; }
+		public string? Category { get; set; }
+		public string? ShortDescription { get; set; }
+		public string? Thumbnail { get; set; }
+		public double Rating { get; set; }
+		public int ReviewsCount { get; set; }
+		public bool IsFavorite { get; set; }
+	}
+}
